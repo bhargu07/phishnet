@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>PhishNet - URL Safety Checker</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        input { padding: 5px; width: 300px; }
+        button { padding: 5px; }
+        .safe { color: green; }
+        .suspicious { color: orange; }
+        .phishing { color: red; }
+    </style>
+</head>
+<body>
+    <h1>PhishNet 🕵️‍♀️</h1>
+    <p>Check if a website is safe or phishing.</p>
+    <input type="text" id="urlInput" placeholder="Enter URL here" />
+    <button onclick="checkURL()">Check</button>
+    <div id="result"></div>
+
+    <script>
+        async function checkURL() {
+            const url = document.getElementById("urlInput").value.trim().split(" ")[0];
+            const resultDiv = document.getElementById("result");
+            resultDiv.innerHTML = "Checking...";
+
+            if (!url) {
+                resultDiv.innerHTML = "<p style='color:red;'>Please enter a URL</p>";
+                return;
+            }
+
+            const finalUrl = /^[a-zA-Z][a-zA-Z0-9+.\-]*:/.test(url) ? url : "https://" + url;
+
+            try {
+                const res = await fetch("/analyze", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url: finalUrl })
+                });
+                const data = await res.json();
+
+                if (data.error) {
+                    resultDiv.innerHTML = `<p style="color:red;">${data.error}</p>`;
+                    return;
+                }
+
+                resultDiv.innerHTML = `
+                    <p><b>URL:</b> ${data.url}</p>
+                    <p><b>Score:</b> <span class="${data.verdict}">${data.score}</span></p>
+                    <p><b>Verdict:</b> <span class="${data.verdict}">${data.verdict}</span></p>
+                    ${data.alerts.length ? "<p><b>Alerts:</b></p><ul>" + data.alerts.map(a => "<li>" + a + "</li>").join("") + "</ul>" : "<p>No alerts ✅</p>"}
+                `;
+            } catch (err) {
+                resultDiv.innerHTML = `<p style="color:red;">Error: ${err}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
